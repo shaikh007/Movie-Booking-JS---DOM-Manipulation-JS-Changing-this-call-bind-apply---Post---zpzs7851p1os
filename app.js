@@ -1,6 +1,5 @@
 import { fetchMovieAvailability, fetchMovieList } from "./api.js";
 
-// Selectors
 const mainElement = document.querySelector("main");
 const bookerElement = document.querySelector("#booker");
 const bookerGridElement = document.querySelector("#booker-grid-holder");
@@ -8,10 +7,8 @@ const bookTicketBtn = document.querySelector("#book-ticket-btn");
 
 bookTicketBtn.addEventListener("click", onBookTicketClickHandler);
 
-// Store Selected Seats
 let selectedSeats = [];
 
-// Task : Convert HTML String to HTML DOM ELEMENT
 const convertToHtmlDom = (htmlInStringFormat) => {
     const element = document.createElement("div");
     element.innerHTML = htmlInStringFormat;
@@ -19,15 +16,10 @@ const convertToHtmlDom = (htmlInStringFormat) => {
 }
 
 
-// Create Loader
 const loader = convertToHtmlDom(`<div class="loader">Loading .........</div>`);
 
 const onSeatClick = (event) => {
     event.target.classList.toggle("selected-seat");
-
-    // logic : if element is having class selected-seat, then, it needs to be push
-    // onto selectedSeats Array and if it is not having, then, remove that seat from 
-    // selectedSeats array
 
     if (event.target.classList.contains("selected-seat")) {
         selectedSeats.push(event.target.innerText);
@@ -35,7 +27,6 @@ const onSeatClick = (event) => {
         selectedSeats = selectedSeats.filter(seat => seat !== event.target.innerText);
     }
 
-    // Add or Remove Book Ticket button from UI
     if (selectedSeats.length > 0) {
         bookTicketBtn.classList.remove("v-none");
     } else {
@@ -47,10 +38,8 @@ const onSeatClick = (event) => {
 
 const renderTheatreLayout = (listOfUnavailableSeats = [], seatNoOffset = 1) => {
 
-    // make a grid of 4*3
     const grid = convertToHtmlDom(`<div class="booking-grid"></div>`);
 
-    // insert Grid elements basically theatre seats
     let theatreSeats = "";
 
     for (let i = 0; i < 12; i++) {
@@ -125,24 +114,17 @@ const renderMovieTheatre = (event) => {
 
         loader.remove();
 
-        // make h3 element of booker div visible
         const bookerElementHeader = document.querySelector("#booker h3");
         bookerElementHeader.classList.toggle("v-none");
 
-        // render Theatre layout view
         renderTheatreLayout(listOfUnavailableSeats);
         renderTheatreLayout(listOfUnavailableSeats, 13);
-
-
-
-
     })
 }
 
-
 const renderMoviesList = async() => {
 
-    mainElement.appendChild(loader); // adding loader before making api call
+    mainElement.appendChild(loader);
     const moviesList = await fetchMovieList();
 
     const movieHolderElement = convertToHtmlDom(`<div class="movie-holder"></div>`)
@@ -165,6 +147,5 @@ const renderMoviesList = async() => {
     loader.remove();
     mainElement.appendChild(movieHolderElement);
 }
-
 
 renderMoviesList();

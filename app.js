@@ -1,151 +1,167 @@
-import { fetchMovieAvailability, fetchMovieList } from "./api.js";
+import { fetchMovieAvailability, fetchMovieList } from "./api.js"
 
-const mainElement = document.querySelector("main");
-const bookerElement = document.querySelector("#booker");
-const bookerGridElement = document.querySelector("#booker-grid-holder");
-const bookTicketBtn = document.querySelector("#book-ticket-btn");
+const mainElement = document.getElementById('main');
+let bookerGridHolder = document.getElementById('booker-grid-holder');
+let bookTicketBtn = document.getElementById('book-ticket-btn');
+let booker = document.getElementById('booker');
 
-bookTicketBtn.addEventListener("click", onBookTicketClickHandler);
+async function renderMovies() {
+    mainElement.innerHTML = `<div id='loader'></div>`;
+    let movies = await fetchMovieList();
+    let movieHolder = document.createElement('div');
+    movieHolder.setAttribute('class', 'movie-holder');
+    movies.forEach(movie => {
+        createSeparateMovieTabs(movie, movieHolder);
+    });
+    mainElement.innerHTML = '';
+    mainElement.appendChild(movieHolder);
+    setEventToLinks();
+}
+renderMovies();
 
-let selectedSeats = [];
-
-const convertToHtmlDom = (htmlInStringFormat) => {
-    const element = document.createElement("div");
-    element.innerHTML = htmlInStringFormat;
-    return element.firstElementChild;
+function createSeparateMovieTabs(data, wrapper) {
+    let a = document.createElement('a');
+    a.setAttribute('data-movie-name', `${data.name}`);
+    a.classList.add('movie-link');
+    a.href = `#${data.name}`;
+    a.innerHTML = `<div class="movie" data-id=${data.name}>
+                    <div class="movie-img-wrapper" style="background-image:url(${data.imgUrl})"></div>
+                    <h4>${data.name}</h4>
+               </div>`;
+    wrapper.appendChild(a);
 }
 
 
-const loader = convertToHtmlDom(`<div class="loader">Loading .........</div>`);
-
-const onSeatClick = (event) => {
-    event.target.classList.toggle("selected-seat");
-
-    if (event.target.classList.contains("selected-seat")) {
-        selectedSeats.push(event.target.innerText);
-    } else {
-        selectedSeats = selectedSeats.filter(seat => seat !== event.target.innerText);
-    }
-
-    if (selectedSeats.length > 0) {
-        bookTicketBtn.classList.remove("v-none");
-    } else {
-        bookTicketBtn.classList.add("v-none");
-    }
-
-}
-
-
-const renderTheatreLayout = (listOfUnavailableSeats = [], seatNoOffset = 1) => {
-
-    const grid = convertToHtmlDom(`<div class="booking-grid"></div>`);
-
-    let theatreSeats = "";
-
-    for (let i = 0; i < 12; i++) {
-        theatreSeats = theatreSeats +
-            `<div id="booking-grid-${i+seatNoOffset}" class="grid-cell ${listOfUnavailableSeats.includes(i+seatNoOffset) ? "unavailable-seat": "available-seat"}">${i+seatNoOffset}</div>`
-    }
-
-    grid.innerHTML = theatreSeats;
-    bookerGridElement.appendChild(grid);
-
-    document.querySelectorAll(".grid-cell").forEach(cell => cell.addEventListener("click", onSeatClick));
-
-}
-
-const renderSuccessMessage = (mobileNumber, email) => {
-    const successMsg = convertToHtmlDom(`<div id="Success">
-        <h4>Booking Details</h4>
-        <div>Seats: ${selectedSeats.join(",")}</div>
-        <div>Phone number: ${mobileNumber}</div>
-        <div>Email: ${email}</div>
-    </div>`);
-
-    bookerElement.appendChild(successMsg);
-
-}
-
-const onPurchaseBtnClickHandler = (event) => {
-    event.preventDefault();
-    const mobileNumber = document.querySelector("#mobile").value;
-    const email = document.querySelector("#email_movie").value;
-    bookerElement.innerHTML = "";
-    renderSuccessMessage(mobileNumber, email);
-}
-
-function renderConfirmPurchaseForm() {
-    const form = convertToHtmlDom(`
-    <div id="confirm-purchase">
-        <h3>Confirm your booking for seat numbers:${selectedSeats.join(",")}</h3>
-        <form id="customer-detail-form">
-        <div>
-            <label for="email_movie">Email: </label>
-            <input type="email" id="email_movie" required />
-            </div>
-            <div>
-            <label for="mobile">Phone Number : </label>
-            <input type="tel" id="mobile" required />
-            </div>
-            <button id="movie_submit_btn" type="submit">Purchase</button>
-        </form>
-    </div>
-    `);
-
-    bookerElement.appendChild(form);
-
-    document.querySelector("form").addEventListener("submit", onPurchaseBtnClickHandler);
-}
-
-function onBookTicketClickHandler() {
-    bookerElement.innerHTML = "";
-    renderConfirmPurchaseForm();
-}
-
-const renderMovieTheatre = (event) => {
-    event.preventDefault();
-    console.log(event.target.innerText);
-
-    const movieName = event.target.innerText ? event.target.innerText : event.target.parentElement.innerText;
-
-    bookerElement.appendChild(loader);
-    fetchMovieAvailability(movieName).then((listOfUnavailableSeats) => {
-        console.log(listOfUnavailableSeats);
-
-        loader.remove();
-
-        const bookerElementHeader = document.querySelector("#booker h3");
-        bookerElementHeader.classList.toggle("v-none");
-
-        renderTheatreLayout(listOfUnavailableSeats);
-        renderTheatreLayout(listOfUnavailableSeats, 13);
+function setEventToLinks() {
+    let movieLinks = document.querySelectorAll('.movie-link');
+    movieLinks.forEach(movieLink => {
+        movieLink.addEventListener('click', (e) => {
+            renderSeatsGrid(movieLink.getAttribute('data-movie-name'));
+        })
     })
 }
 
-const renderMoviesList = async() => {
-
-    mainElement.appendChild(loader);
-    const moviesList = await fetchMovieList();
-
-    const movieHolderElement = convertToHtmlDom(`<div class="movie-holder"></div>`)
-
-    moviesList.forEach(movie => {
-        const movieElement = convertToHtmlDom(`<a class="movie-link" href="/${movie.name}">
-        <div class="movie" data-id=${movie.name}>
-        <div class="movie-img-wrapper" style="background-image: url(${movie.imgUrl});">
-        </div>
-        <h4>${movie.name}</h4>
-        </div>
-        </a>`);
-
-        movieElement.addEventListener("click", renderMovieTheatre);
-
-        movieHolderElement.appendChild(movieElement);
-
-    });
-
-    loader.remove();
-    mainElement.appendChild(movieHolderElement);
+async function renderSeatsGrid(movieName) {
+    bookerGridHolder.innerHTML = `<div id='loader'></div>`;
+    bookTicketBtn.classList.add('v-none');
+    let data = await fetchMovieAvailability(movieName);
+    renderSeats(data);
+    setEventsToSeats();
 }
 
-renderMoviesList();
+function renderSeats(data) {
+    if (booker.firstElementChild.tagName !== "H3") {
+        seatsSelected = [];
+        booker.innerHTML = `<h3 class="v-none">Seat Selector</h3>
+                              <div id="booker-grid-holder"></div>
+                              <button id="book-ticket-btn" class="v-none">Book my seats</button>`;
+    }
+    bookerGridHolder = document.getElementById('booker-grid-holder');
+    bookTicketBtn = document.getElementById('book-ticket-btn');
+    bookerGridHolder.innerHTML = '';
+    booker.firstElementChild.classList.remove('v-none');
+    createSeatsGrid(data)
+}
+
+function createSeatsGrid(data) {
+    let bookingGrid1 = document.createElement("div");
+    let bookingGrid2 = document.createElement("div");
+    bookingGrid2.classList.add("booking-grid");
+    bookingGrid1.classList.add("booking-grid");
+    for (let i = 1; i < 25; i++) {
+        let seat = document.createElement("div");
+        seat.innerHTML = i;
+        seat.setAttribute("id", `booking-grid-${i}`);
+        if (data.includes(i)) seat.classList.add("seat", "unavailable-seat");
+        else seat.classList.add("seat", "available-seat");
+        if (i > 12) bookingGrid2.appendChild(seat);
+        else bookingGrid1.appendChild(seat);
+    }
+    bookerGridHolder.appendChild(bookingGrid1);
+    bookerGridHolder.appendChild(bookingGrid2);
+    setTicketBooking();
+}
+
+let seatsSelected = [];
+
+function setEventsToSeats() {
+    let AvaliableSeats = document.querySelectorAll('.available-seat');
+    AvaliableSeats.forEach(seat => {
+        seat.addEventListener('click', _ => {
+            saveSelectedSeat(seat);
+        })
+    })
+}
+
+function saveSelectedSeat(seat) {
+    if (!seat.classList.contains("select-seat")) {
+        seat.classList.add('select-seat');
+        seatsSelected.push(seat.innerText);
+        bookTicketBtn.classList.remove('v-none');
+    } else {
+        seat.classList.remove('select-seat');
+        seatsSelected = seatsSelected.filter(item => seat.innerText !== item);
+        if (seatsSelected.length == 0) {
+            bookTicketBtn.classList.add('v-none');
+        }
+    }
+}
+
+function setTicketBooking() {
+    bookTicketBtn.addEventListener('click', () => {
+        if (seatsSelected.length > 0) {
+            booker.innerHTML = '';
+            confirmTicket();
+        }
+    })
+}
+
+function confirmTicket() {
+    let confirmTicketElement = document.createElement('div');
+    confirmTicketElement.setAttribute('id', 'confirm-purchase');
+    let h3 = document.createElement('h3');
+    h3.innerText = `Confirm your booking for seat numbers:${seatsSelected.join(",")}`;
+    confirmTicketElement.appendChild(h3);
+    confirmTicketElement.appendChild(createForm());
+    booker.appendChild(confirmTicketElement);
+    success();
+}
+
+function createForm() {
+    let form = document.createElement("form");
+    let formElements = `<input type="email" id="email" placeholder="email" required><br><br>
+                         <input type="tel" id="phone" placeholder="phone" required><br><br>
+                         <button id="submitBtn" type="submit">Purchase</button>`;
+    form.setAttribute("method", "post");
+    form.setAttribute("id", "customer-detail-form");
+    form.innerHTML = formElements;
+    return form;
+}
+
+function success() {
+    let submitBtn = document.getElementById('submitBtn');
+    submitBtn.addEventListener('click', (e) => {
+        let form = document.getElementById('customer-detail-form');
+        if (form.checkValidity()) {
+            e.preventDefault();
+            let email = document.getElementById('email').value;
+            let phone = document.getElementById('phone').value;
+            renderSuccessMessage(email, phone);
+        }
+    })
+}
+
+function renderSuccessMessage(email, phone) {
+    booker.innerHTML = '';
+    createSuccessMessage(email, phone);
+}
+
+function createSuccessMessage(email, phone) {
+    let successElement = document.createElement("div");
+    successElement.setAttribute("id", "success");
+    successElement.innerHTML = `<h3>Booking details</h3>
+                               <p>Seats: ${seatsSelected.join(", ")}</p>
+                              <p>Email: ${email}</p>
+                              <p>Phone number: ${phone}</p>`;
+    booker.appendChild(successElement);
+}
